@@ -1,4 +1,5 @@
 "use client"
+
 import { Button } from "@/components/ui/button"
 import { Download, FileText } from "lucide-react"
 
@@ -22,24 +23,24 @@ export function CalendarIntegration({
   getTotalHours,
 }: CalendarIntegrationProps) {
   return (
-    <div className="space-y-3">
-      <div className="text-sm font-medium flex items-center gap-2">📤 エクスポート</div>
-
+    <div className="space-y-4">
       {/* Export Options */}
-      <div className="space-y-2">
-        <Button onClick={onExportICalendar} variant="outline" size="sm" className="w-full">
-          <Download className="h-4 w-4 mr-2" />
+      <div className="space-y-3">
+        <Button onClick={onExportICalendar} variant="outline" className="w-full h-12 text-base">
+          <Download className="h-5 w-5 mr-2" />
           iCal出力
         </Button>
 
-        <Button onClick={onExportPDF} variant="outline" size="sm" className="w-full">
-          <FileText className="h-4 w-4 mr-2" />
+        <Button onClick={onExportPDF} variant="outline" className="w-full h-12 text-base">
+          <FileText className="h-5 w-5 mr-2" />
           PDF出力
         </Button>
       </div>
 
-      <div className="text-xs text-gray-500 text-center">
-        TimeTree、GoogleカレンダーなどにiCalファイルをインポートできます
+      <div className="text-sm text-gray-500 text-center leading-relaxed">
+        TimeTree、Googleカレンダーなどに
+        <br />
+        iCalファイルをインポートできます
       </div>
     </div>
   )

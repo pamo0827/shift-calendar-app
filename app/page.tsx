@@ -6,12 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { ShiftModal } from "@/components/shift-modal"
 import { BulkInputModal } from "@/components/bulk-input-modal"
 import { CalendarIntegration } from "@/components/calendar-integration"
 import { format, isSameDay, startOfMonth, endOfMonth } from "date-fns"
 import { ja } from "date-fns/locale"
-import { Calculator, CalendarIcon } from "lucide-react"
+import { Calculator, CalendarIcon, Plus, List } from "lucide-react"
 import { generatePDF } from "@/lib/pdf-generator"
 import { exportToICalendar } from "@/lib/icalendar-export"
 
@@ -31,6 +32,7 @@ export default function ShifPostApp() {
   const [shifts, setShifts] = useState(sampleShifts)
   const [hourlyWage, setHourlyWage] = useState<number>(1000)
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [activeView, setActiveView] = useState<"calendar" | "list">("calendar")
 
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
@@ -157,222 +159,242 @@ export default function ShifPostApp() {
     "text-blue-600 hover:text-blue-700",
   ]
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* ヘッダー */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-3">
-            <div className="text-4xl">⚡</div>
-            <h1 className="text-4xl font-bold text-gray-900">Shif-Post</h1>
-          </div>
-          <p className="text-gray-600">カレンダーから日付を選択して、勤務可能な時間帯を登録してください</p>
-          <p className="text-sm text-blue-600">💡 曜日をタップすると、その曜日で一括入力できます</p>
-        </div>
+  const monthlyShifts = shifts
+    .filter((shift) => {
+      const monthStart = startOfMonth(currentMonth)
+      const monthEnd = endOfMonth(currentMonth)
+      return shift.date >= monthStart && shift.date <= monthEnd
+    })
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
 
-        {/* 統計情報とアクション */}
-        <div className="grid md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* 固定ヘッダー */}
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b shadow-sm">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="text-2xl">⚡</div>
+              <h1 className="text-xl font-bold text-gray-900">Shif-Post</h1>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setIsBulkModalOpen(true)} className="h-9 px-3">
+              <Plus className="h-4 w-4 mr-1" />
+              一括入力
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 pb-20">
+        {/* 月間サマリー */}
+        <div className="py-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="p-3">
               <div className="flex items-center gap-2">
-                <Calculator className="h-5 w-5 text-blue-600" />
+                <Calculator className="h-4 w-4 text-blue-600" />
                 <div>
-                  <div className="text-sm text-gray-600">月間予定時間</div>
-                  <div className="text-2xl font-bold">{getTotalHours()}h</div>
+                  <div className="text-xs text-gray-600">月間予定時間</div>
+                  <div className="text-lg font-bold">{getTotalHours()}h</div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </Card>
 
-          <Card>
-            <CardContent className="p-4">
+            <Card className="p-3">
               <div className="flex items-center gap-2">
                 <div className="text-green-600">💰</div>
                 <div>
-                  <div className="text-sm text-gray-600">予想月収</div>
-                  <div className="text-2xl font-bold">¥{calculateMonthlyIncome().toLocaleString()}</div>
+                  <div className="text-xs text-gray-600">予想月収</div>
+                  <div className="text-lg font-bold">¥{calculateMonthlyIncome().toLocaleString()}</div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </Card>
+          </div>
 
-          <Card>
-            <CardContent className="p-4 space-y-2">
-              <Label htmlFor="hourlyWage" className="text-sm">
-                時給設定
+          <Card className="p-3">
+            <div className="flex items-center gap-3">
+              <Label htmlFor="hourlyWage" className="text-sm whitespace-nowrap">
+                時給
               </Label>
               <Input
                 id="hourlyWage"
                 type="number"
                 value={hourlyWage}
                 onChange={(e) => setHourlyWage(Number(e.target.value))}
-                className="h-8"
+                className="h-9 flex-1"
               />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <CalendarIntegration
-                shifts={shifts}
-                currentMonth={currentMonth}
-                onExportICalendar={handleExportICalendar}
-                onExportPDF={handleExportPDF}
-                hourlyWage={hourlyWage}
-                calculateMonthlyIncome={calculateMonthlyIncome}
-                getTotalHours={getTotalHours}
-              />
-            </CardContent>
+            </div>
           </Card>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* 大きなカレンダー */}
-          <Card className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5" />
-                シフトカレンダー - {format(currentMonth, "yyyy年M月", { locale: ja })}
-              </CardTitle>
-              <CardDescription>
-                日付をクリックしてシフトを登録・編集 |<span className="text-blue-600 font-medium"> 土曜日</span> |
-                <span className="text-red-600 font-medium"> 日曜日</span>
+        {/* ビュー切り替え */}
+        <div className="flex bg-gray-100 rounded-lg p-1 mb-4">
+          <button
+            onClick={() => setActiveView("calendar")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              activeView === "calendar" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <CalendarIcon className="h-4 w-4" />
+            カレンダー
+          </button>
+          <button
+            onClick={() => setActiveView("list")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              activeView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <List className="h-4 w-4" />
+            リスト
+          </button>
+        </div>
+
+        {/* カレンダービュー */}
+        {activeView === "calendar" && (
+          <Card className="mb-4">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">{format(currentMonth, "yyyy年M月", { locale: ja })}</CardTitle>
+              <CardDescription className="text-sm">
+                日付をタップしてシフト登録 | 曜日をタップして一括入力
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex justify-center">
-                <div className="w-full max-w-4xl">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={handleDateSelect}
-                    locale={ja}
-                    modifiers={modifiers}
-                    modifiersStyles={modifiersStyles}
-                    className="rounded-md border shadow-sm w-full"
-                    disabled={(date) => date < new Date()}
-                    month={currentMonth}
-                    onMonthChange={setCurrentMonth}
-                    components={{
-                      Head: ({ children, ...props }) => (
-                        <thead {...props}>
-                          <tr className="flex w-full">
-                            {weekdayLabels.map((label, index) => (
-                              <th
+            <CardContent className="px-2">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                locale={ja}
+                modifiers={modifiers}
+                modifiersStyles={modifiersStyles}
+                className="w-full"
+                disabled={(date) => date < new Date()}
+                month={currentMonth}
+                onMonthChange={setCurrentMonth}
+                components={{
+                  Head: ({ children, ...props }) => (
+                    <thead {...props}>
+                      <tr className="flex w-full">
+                        {weekdayLabels.map((label, index) => (
+                          <th
+                            key={index}
+                            className={`w-full font-medium text-sm p-3 cursor-pointer transition-colors rounded-md ${weekdayColors[index]} hover:bg-gray-100 active:bg-gray-200`}
+                            onClick={() => handleWeekdayClick(index)}
+                            title={`${label}曜日で一括入力`}
+                          >
+                            {label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                  ),
+                  DayContent: ({ date }) => {
+                    const shift = getShiftForDate(date)
+                    return (
+                      <div className="relative w-full h-full flex flex-col items-center justify-center p-1 min-h-[60px]">
+                        <div className="text-sm font-medium mb-1">{date.getDate()}</div>
+                        {shift && (
+                          <div className="text-xs space-y-0.5 w-full">
+                            {shift.timeSlots.slice(0, 1).map((slot, index) => (
+                              <div
                                 key={index}
-                                className={`rounded-md w-full font-normal text-sm p-2 cursor-pointer transition-colors ${weekdayColors[index]} hover:bg-gray-100`}
-                                onClick={() => handleWeekdayClick(index)}
-                                title={`${label}曜日で一括入力`}
+                                className="bg-white/90 text-gray-700 px-1 py-0.5 rounded text-center truncate text-xs"
                               >
-                                {label}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                      ),
-                      DayContent: ({ date }) => {
-                        const shift = getShiftForDate(date)
-                        return (
-                          <div className="relative w-full h-full flex flex-col items-center justify-center p-1">
-                            <div className="text-sm font-medium">{date.getDate()}</div>
-                            {shift && (
-                              <div className="text-xs space-y-0.5 mt-1 w-full">
-                                {shift.timeSlots.slice(0, 2).map((slot, index) => (
-                                  <div
-                                    key={index}
-                                    className="bg-white/90 text-gray-700 px-1 py-0.5 rounded text-center truncate"
-                                  >
-                                    {slot}
-                                  </div>
-                                ))}
-                                {shift.timeSlots.length > 2 && (
-                                  <div className="text-xs text-center text-white/80">+{shift.timeSlots.length - 2}</div>
-                                )}
+                                {slot}
                               </div>
+                            ))}
+                            {shift.timeSlots.length > 1 && (
+                              <div className="text-xs text-center text-white/80">+{shift.timeSlots.length - 1}</div>
                             )}
                           </div>
-                        )
-                      },
-                    }}
-                    classNames={{
-                      months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                      month: "space-y-4 w-full",
-                      caption: "flex justify-center pt-1 relative items-center text-lg font-medium",
-                      caption_label: "text-lg font-medium",
-                      nav: "space-x-1 flex items-center",
-                      nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100",
-                      nav_button_previous: "absolute left-1",
-                      nav_button_next: "absolute right-1",
-                      table: "w-full border-collapse space-y-1",
-                      head_row: "flex w-full",
-                      head_cell: "text-muted-foreground rounded-md w-full font-normal text-sm p-2",
-                      row: "flex w-full mt-2",
-                      cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-middle)]:rounded-none w-full h-24 border border-gray-100",
-                      day: "h-full w-full p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-                      day_range_start: "day-range-start",
-                      day_range_end: "day-range-end",
-                      day_selected:
-                        "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                      day_today: "bg-accent text-accent-foreground",
-                      day_outside:
-                        "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-                      day_disabled: "text-muted-foreground opacity-50",
-                      day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                      day_hidden: "invisible",
-                    }}
-                  />
-                </div>
-              </div>
+                        )}
+                      </div>
+                    )
+                  },
+                }}
+                classNames={{
+                  months: "flex flex-col space-y-4 w-full",
+                  month: "space-y-4 w-full",
+                  caption: "flex justify-center pt-1 relative items-center text-lg font-medium",
+                  caption_label: "text-lg font-medium",
+                  nav: "space-x-1 flex items-center",
+                  nav_button: "h-9 w-9 bg-transparent p-0 opacity-50 hover:opacity-100 rounded-md hover:bg-gray-100",
+                  nav_button_previous: "absolute left-1",
+                  nav_button_next: "absolute right-1",
+                  table: "w-full border-collapse space-y-1",
+                  head_row: "flex w-full",
+                  head_cell: "text-muted-foreground rounded-md w-full font-normal text-sm p-2",
+                  row: "flex w-full mt-1",
+                  cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 w-full min-h-[60px] border border-gray-100 rounded-md",
+                  day: "h-full w-full p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground rounded-md transition-colors",
+                  day_selected:
+                    "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                  day_today: "bg-accent text-accent-foreground",
+                  day_outside:
+                    "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
+                  day_disabled: "text-muted-foreground opacity-50",
+                  day_hidden: "invisible",
+                }}
+              />
             </CardContent>
           </Card>
+        )}
 
-          {/* 登録済みシフト一覧 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">📋 今月のシフト</CardTitle>
+        {/* リストビュー */}
+        {activeView === "list" && (
+          <Card className="mb-4">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">今月のシフト</CardTitle>
               <CardDescription>登録済み勤務希望一覧</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 max-h-96 overflow-y-auto">
-              {shifts.filter((shift) => {
-                const monthStart = startOfMonth(currentMonth)
-                const monthEnd = endOfMonth(currentMonth)
-                return shift.date >= monthStart && shift.date <= monthEnd
-              }).length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">まだシフトが登録されていません</p>
+            <CardContent className="space-y-3">
+              {monthlyShifts.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-2">📅</div>
+                  <p className="text-gray-500">まだシフトが登録されていません</p>
+                  <Button onClick={() => setActiveView("calendar")} variant="outline" className="mt-3">
+                    カレンダーで登録
+                  </Button>
+                </div>
               ) : (
-                shifts
-                  .filter((shift) => {
-                    const monthStart = startOfMonth(currentMonth)
-                    const monthEnd = endOfMonth(currentMonth)
-                    return shift.date >= monthStart && shift.date <= monthEnd
-                  })
-                  .sort((a, b) => a.date.getTime() - b.date.getTime())
-                  .map((shift, index) => (
-                    <div key={index} className="space-y-2 p-3 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <div className="font-medium text-sm">{format(shift.date, "M月d日(E)", { locale: ja })}</div>
-                        <button
-                          onClick={() => handleShiftDelete(shift.date)}
-                          className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {shift.timeSlots.map((slot, slotIndex) => (
-                          <Badge key={slotIndex} variant="secondary" className="text-xs">
-                            {slot}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="text-xs text-gray-500">
+                monthlyShifts.map((shift, index) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-gray-50 rounded-lg space-y-3 active:bg-gray-100 transition-colors"
+                    onClick={() => {
+                      setSelectedDate(shift.date)
+                      setIsModalOpen(true)
+                    }}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="font-medium">{format(shift.date, "M月d日(E)", { locale: ja })}</div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleShiftDelete(shift.date)
+                        }}
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {shift.timeSlots.map((slot, slotIndex) => (
+                        <Badge key={slotIndex} variant="secondary" className="text-sm py-1">
+                          {slot}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="text-sm text-gray-600 flex justify-between">
+                      <span>
                         {shift.timeSlots.reduce((total, slot) => {
                           const [start, end] = slot.split("-")
                           const startHour = Number.parseInt(start.split(":")[0])
                           const endHour = Number.parseInt(end.split(":")[0])
                           return total + (endHour - startHour)
                         }, 0)}
-                        時間 / ¥
+                        時間
+                      </span>
+                      <span className="font-medium">
+                        ¥
                         {shift.timeSlots
                           .reduce((total, slot) => {
                             const [start, end] = slot.split("-")
@@ -381,13 +403,32 @@ export default function ShifPostApp() {
                             return total + (endHour - startHour) * hourlyWage
                           }, 0)
                           .toLocaleString()}
-                      </div>
+                      </span>
                     </div>
-                  ))
+                  </div>
+                ))
               )}
             </CardContent>
           </Card>
-        </div>
+        )}
+
+        {/* エクスポート */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">エクスポート</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CalendarIntegration
+              shifts={shifts}
+              currentMonth={currentMonth}
+              onExportICalendar={handleExportICalendar}
+              onExportPDF={handleExportPDF}
+              hourlyWage={hourlyWage}
+              calculateMonthlyIncome={calculateMonthlyIncome}
+              getTotalHours={getTotalHours}
+            />
+          </CardContent>
+        </Card>
       </div>
 
       {/* シフト登録モーダル */}

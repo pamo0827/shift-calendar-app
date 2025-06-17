@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { format, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns"
 import { ja } from "date-fns/locale"
-import { Users, Save, Zap } from "lucide-react"
+import { Users, Save, Zap, X } from "lucide-react"
 
 interface BulkInputModalProps {
   isOpen: boolean
@@ -96,13 +96,18 @@ export function BulkInputModal({ isOpen, onClose, onSave, currentMonth, preselec
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {preselectedWeekday !== undefined ? <Zap className="h-5 w-5" /> : <Users className="h-5 w-5" />}
-            {preselectedWeekday !== undefined ? `${getWeekdayName(preselectedWeekday)}の一括入力` : "一括シフト入力"}
-          </DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="text-left">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              {preselectedWeekday !== undefined ? <Zap className="h-5 w-5" /> : <Users className="h-5 w-5" />}
+              {preselectedWeekday !== undefined ? `${getWeekdayName(preselectedWeekday)}の一括入力` : "一括シフト入力"}
+            </DialogTitle>
+            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <DialogDescription className="text-base">
             {format(currentMonth, "yyyy年M月", { locale: ja })} の曜日を指定してまとめて登録
             {preselectedWeekday !== undefined && (
               <span className="block text-blue-600 font-medium mt-1">
@@ -114,19 +119,24 @@ export function BulkInputModal({ isOpen, onClose, onSave, currentMonth, preselec
 
         <div className="space-y-6">
           {/* 曜日選択 */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="text-sm font-medium">対象曜日を選択:</div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-3">
               {WEEKDAYS.map((weekday) => (
-                <div key={weekday.value} className="flex items-center space-x-2">
+                <div
+                  key={weekday.value}
+                  className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer"
+                  onClick={() => handleWeekdayToggle(weekday.value)}
+                >
                   <Checkbox
                     id={`weekday-${weekday.value}`}
                     checked={selectedWeekdays.includes(weekday.value)}
-                    onCheckedChange={() => handleWeekdayToggle(weekday.value)}
+                    onChange={() => handleWeekdayToggle(weekday.value)}
+                    className="pointer-events-none"
                   />
                   <label
                     htmlFor={`weekday-${weekday.value}`}
-                    className={`text-sm font-medium leading-none cursor-pointer ${weekday.color}`}
+                    className={`text-base font-medium leading-none cursor-pointer flex-1 ${weekday.color}`}
                   >
                     {weekday.label}
                   </label>
@@ -138,17 +148,25 @@ export function BulkInputModal({ isOpen, onClose, onSave, currentMonth, preselec
           <Separator />
 
           {/* 時間帯選択 */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="text-sm font-medium">勤務可能時間帯を選択:</div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-3">
               {TIME_SLOTS.map((timeSlot) => (
-                <div key={timeSlot} className="flex items-center space-x-2">
+                <div
+                  key={timeSlot}
+                  className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer"
+                  onClick={() => handleTimeSlotToggle(timeSlot)}
+                >
                   <Checkbox
                     id={`bulk-${timeSlot}`}
                     checked={selectedTimeSlots.includes(timeSlot)}
-                    onCheckedChange={() => handleTimeSlotToggle(timeSlot)}
+                    onChange={() => handleTimeSlotToggle(timeSlot)}
+                    className="pointer-events-none"
                   />
-                  <label htmlFor={`bulk-${timeSlot}`} className="text-sm font-medium leading-none cursor-pointer">
+                  <label
+                    htmlFor={`bulk-${timeSlot}`}
+                    className="text-base font-medium leading-none cursor-pointer flex-1"
+                  >
                     {timeSlot}
                   </label>
                 </div>
@@ -158,12 +176,12 @@ export function BulkInputModal({ isOpen, onClose, onSave, currentMonth, preselec
 
           {/* プレビュー */}
           {selectedWeekdays.length > 0 && selectedTimeSlots.length > 0 && (
-            <div className="space-y-2 p-3 bg-blue-50 rounded-lg">
+            <div className="space-y-3 p-4 bg-blue-50 rounded-lg">
               <div className="text-sm font-medium text-blue-900">登録予定:</div>
               <div className="text-sm text-blue-700">対象日数: {getTargetDates().length}日</div>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-2">
                 {selectedTimeSlots.map((slot) => (
-                  <Badge key={slot} variant="secondary" className="text-xs">
+                  <Badge key={slot} variant="secondary" className="text-sm">
                     {slot}
                   </Badge>
                 ))}
@@ -172,23 +190,25 @@ export function BulkInputModal({ isOpen, onClose, onSave, currentMonth, preselec
           )}
 
           {/* アクションボタン */}
-          <div className="flex gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={handleClear}
-              className="flex-1"
-              disabled={selectedWeekdays.length === 0 && selectedTimeSlots.length === 0}
-            >
-              クリア
-            </Button>
-            <Button
-              onClick={handleSave}
-              className="flex-1"
-              disabled={selectedWeekdays.length === 0 || selectedTimeSlots.length === 0}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              一括登録
-            </Button>
+          <div className="space-y-3 pt-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                onClick={handleClear}
+                className="h-12 text-base"
+                disabled={selectedWeekdays.length === 0 && selectedTimeSlots.length === 0}
+              >
+                クリア
+              </Button>
+              <Button
+                onClick={handleSave}
+                className="h-12 text-base"
+                disabled={selectedWeekdays.length === 0 || selectedTimeSlots.length === 0}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                一括登録
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
