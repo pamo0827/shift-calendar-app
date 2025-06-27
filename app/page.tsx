@@ -12,7 +12,7 @@ import { BulkInputModal } from "@/components/bulk-input-modal"
 import { CalendarIntegration } from "@/components/calendar-integration"
 import { format, isSameDay, startOfMonth, endOfMonth } from "date-fns"
 import { ja } from "date-fns/locale"
-import { Calculator, CalendarIcon, Plus, List } from "lucide-react"
+import { Calculator, CalendarIcon, Plus, List, Sun } from "lucide-react"
 import { generatePDF } from "@/lib/pdf-generator"
 import { exportToICalendar } from "@/lib/icalendar-export"
 
@@ -20,6 +20,7 @@ import { exportToICalendar } from "@/lib/icalendar-export"
 const sampleShifts = [
   { date: new Date(2024, 11, 15), timeSlots: ["09:00-13:00", "14:00-18:00"] },
   { date: new Date(2024, 11, 16), timeSlots: ["10:00-14:00"] },
+  { date: new Date(2024, 11, 18), timeSlots: ["終日"] },
   { date: new Date(2024, 11, 20), timeSlots: ["13:00-17:00", "18:00-22:00"] },
   { date: new Date(2024, 11, 22), timeSlots: ["09:00-13:00"] },
 ]
@@ -50,7 +51,7 @@ export default function ShifPostApp() {
     setShifts((prev) => {
       const filtered = prev.filter((shift) => !isSameDay(shift.date, date))
       if (timeSlots.length > 0) {
-        return [...filtered, { date, timeSlots }]
+        return [...filtered, { date, timeSlots }].sort((a, b) => a.date.getTime() - b.date.getTime())
       }
       return filtered
     })
@@ -70,7 +71,7 @@ export default function ShifPostApp() {
           updated.push({ date, timeSlots })
         }
       })
-      return updated
+      return updated.sort((a, b) => a.date.getTime() - b.date.getTime())
     })
     setIsBulkModalOpen(false)
     setBulkSelectedWeekday(undefined)
@@ -80,42 +81,34 @@ export default function ShifPostApp() {
     return shifts.find((shift) => isSameDay(shift.date, date))
   }
 
-  const calculateMonthlyIncome = () => {
-    const monthStart = startOfMonth(currentMonth)
-    const monthEnd = endOfMonth(currentMonth)
-
-    let totalHours = 0
-    shifts.forEach((shift) => {
-      if (shift.date >= monthStart && shift.date <= monthEnd) {
-        shift.timeSlots.forEach((slot) => {
-          const [start, end] = slot.split("-")
-          const startHour = Number.parseInt(start.split(":")[0])
-          const endHour = Number.parseInt(end.split(":")[0])
-          totalHours += endHour - startHour
-        })
-      }
-    })
-
-    return totalHours * hourlyWage
+  const calculateHoursForSlot = (slot: string): number => {
+    if (slot === "終日") {
+      return 8 // 終日の場合は8時間として計算
+    }
+    const [start, end] = slot.split("-")
+    if (!start || !end) return 0
+    const startHour = Number.parseInt(start.split(":")[0])
+    const startMinute = Number.parseInt(start.split(":")[1])
+    const endHour = Number.parseInt(end.split(":")[0])
+    const endMinute = Number.parseInt(end.split(":")[1])
+    if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) return 0
+    return endHour - startHour + (endMinute - startMinute) / 60
   }
 
   const getTotalHours = () => {
     const monthStart = startOfMonth(currentMonth)
     const monthEnd = endOfMonth(currentMonth)
 
-    let totalHours = 0
-    shifts.forEach((shift) => {
-      if (shift.date >= monthStart && shift.date <= monthEnd) {
-        shift.timeSlots.forEach((slot) => {
-          const [start, end] = slot.split("-")
-          const startHour = Number.parseInt(start.split(":")[0])
-          const endHour = Number.parseInt(end.split(":")[0])
-          totalHours += endHour - startHour
-        })
-      }
-    })
+    return shifts
+      .filter((shift) => shift.date >= monthStart && shift.date <= monthEnd)
+      .reduce((total, shift) => {
+        const hours = shift.timeSlots.reduce((sum, slot) => sum + calculateHoursForSlot(slot), 0)
+        return total + hours
+      }, 0)
+  }
 
-    return totalHours
+  const calculateMonthlyIncome = () => {
+    return getTotalHours() * hourlyWage
   }
 
   const modifiers = {
@@ -194,7 +187,7 @@ export default function ShifPostApp() {
                 <Calculator className="h-4 w-4 text-blue-600" />
                 <div>
                   <div className="text-xs text-gray-600">月間予定時間</div>
-                  <div className="text-lg font-bold">{getTotalHours()}h</div>
+                  <div className="text-lg font-bold">{getTotalHours().toFixed(2)}h</div>
                 </div>
               </div>
             </Card>
@@ -288,21 +281,30 @@ export default function ShifPostApp() {
                   ),
                   DayContent: ({ date }) => {
                     const shift = getShiftForDate(date)
+                    const isAllDay = shift?.timeSlots.includes("終日")
                     return (
                       <div className="relative w-full h-full flex flex-col items-center justify-center p-1 min-h-[60px]">
                         <div className="text-sm font-medium mb-1">{date.getDate()}</div>
                         {shift && (
                           <div className="text-xs space-y-0.5 w-full">
-                            {shift.timeSlots.slice(0, 1).map((slot, index) => (
-                              <div
-                                key={index}
-                                className="bg-white/90 text-gray-700 px-1 py-0.5 rounded text-center truncate text-xs"
-                              >
-                                {slot}
+                            {isAllDay ? (
+                              <div className="bg-red-100 text-red-700 px-1 py-0.5 rounded text-center truncate text-xs font-bold">
+                                終日
                               </div>
-                            ))}
-                            {shift.timeSlots.length > 1 && (
-                              <div className="text-xs text-center text-white/80">+{shift.timeSlots.length - 1}</div>
+                            ) : (
+                              <>
+                                {shift.timeSlots.slice(0, 1).map((slot, index) => (
+                                  <div
+                                    key={index}
+                                    className="bg-white/90 text-gray-700 px-1 py-0.5 rounded text-center truncate text-xs"
+                                  >
+                                    {slot}
+                                  </div>
+                                ))}
+                                {shift.timeSlots.length > 1 && (
+                                  <div className="text-xs text-center text-white/80">+{shift.timeSlots.length - 1}</div>
+                                )}
+                              </>
                             )}
                           </div>
                         )}
@@ -355,58 +357,49 @@ export default function ShifPostApp() {
                   </Button>
                 </div>
               ) : (
-                monthlyShifts.map((shift, index) => (
-                  <div
-                    key={index}
-                    className="p-4 bg-gray-50 rounded-lg space-y-3 active:bg-gray-100 transition-colors"
-                    onClick={() => {
-                      setSelectedDate(shift.date)
-                      setIsModalOpen(true)
-                    }}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="font-medium">{format(shift.date, "M月d日(E)", { locale: ja })}</div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleShiftDelete(shift.date)
-                        }}
-                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors flex items-center justify-center"
-                      >
-                        ×
-                      </button>
+                monthlyShifts.map((shift, index) => {
+                  const totalHours = shift.timeSlots.reduce((sum, slot) => sum + calculateHoursForSlot(slot), 0)
+                  const income = totalHours * hourlyWage
+                  return (
+                    <div
+                      key={index}
+                      className="p-4 bg-gray-50 rounded-lg space-y-3 active:bg-gray-100 transition-colors"
+                      onClick={() => {
+                        setSelectedDate(shift.date)
+                        setIsModalOpen(true)
+                      }}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="font-medium">{format(shift.date, "M月d日(E)", { locale: ja })}</div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleShiftDelete(shift.date)
+                          }}
+                          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors flex items-center justify-center"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {shift.timeSlots.map((slot, slotIndex) => (
+                          <Badge
+                            key={slotIndex}
+                            variant={slot === "終日" ? "destructive" : "secondary"}
+                            className="text-sm py-1"
+                          >
+                            {slot === "終日" && <Sun className="h-3 w-3 mr-1.5" />}
+                            {slot}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="text-sm text-gray-600 flex justify-between">
+                        <span>{totalHours.toFixed(2)}時間</span>
+                        <span className="font-medium">¥{income.toLocaleString()}</span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {shift.timeSlots.map((slot, slotIndex) => (
-                        <Badge key={slotIndex} variant="secondary" className="text-sm py-1">
-                          {slot}
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="text-sm text-gray-600 flex justify-between">
-                      <span>
-                        {shift.timeSlots.reduce((total, slot) => {
-                          const [start, end] = slot.split("-")
-                          const startHour = Number.parseInt(start.split(":")[0])
-                          const endHour = Number.parseInt(end.split(":")[0])
-                          return total + (endHour - startHour)
-                        }, 0)}
-                        時間
-                      </span>
-                      <span className="font-medium">
-                        ¥
-                        {shift.timeSlots
-                          .reduce((total, slot) => {
-                            const [start, end] = slot.split("-")
-                            const startHour = Number.parseInt(start.split(":")[0])
-                            const endHour = Number.parseInt(end.split(":")[0])
-                            return total + (endHour - startHour) * hourlyWage
-                          }, 0)
-                          .toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </CardContent>
           </Card>
