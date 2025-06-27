@@ -21,7 +21,14 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={inter.className}>
-        <SecurityProvider>{children}</SecurityProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SecurityProvider>{children}</SecurityProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

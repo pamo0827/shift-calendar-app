@@ -20,18 +20,7 @@ interface ShiftModalProps {
   onDelete?: () => void
 }
 
-const TIME_SLOTS = [
-  "09:00-13:00",
-  "10:00-14:00",
-  "11:00-15:00",
-  "12:00-16:00",
-  "13:00-17:00",
-  "14:00-18:00",
-  "15:00-19:00",
-  "16:00-20:00",
-  "17:00-21:00",
-  "18:00-22:00",
-]
+
 
 export function ShiftModal({ isOpen, onClose, selectedDate, existingShift, onSave, onDelete }: ShiftModalProps) {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([])
@@ -185,27 +174,7 @@ export function ShiftModal({ isOpen, onClose, selectedDate, existingShift, onSav
 
             <Separator />
 
-            {/* 時間帯選択 */}
-            <div className="space-y-3">
-              <div className="text-sm font-medium">または、時間帯を選択:</div>
-              {TIME_SLOTS.map((timeSlot) => (
-                <div
-                  key={timeSlot}
-                  className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer"
-                  onClick={() => handleTimeSlotToggle(timeSlot)}
-                >
-                  <Checkbox
-                    id={timeSlot}
-                    checked={selectedTimeSlots.includes(timeSlot)}
-                    onChange={() => handleTimeSlotToggle(timeSlot)}
-                    className="pointer-events-none"
-                  />
-                  <label htmlFor={timeSlot} className="text-base font-medium leading-none cursor-pointer flex-1">
-                    {timeSlot}
-                  </label>
-                </div>
-              ))}
-            </div>
+            
           </fieldset>
 
           {/* アクションボタン */}

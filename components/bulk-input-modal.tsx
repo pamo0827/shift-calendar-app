@@ -18,18 +18,7 @@ interface BulkInputModalProps {
   preselectedWeekday?: number
 }
 
-const TIME_SLOTS = [
-  "09:00-13:00",
-  "10:00-14:00",
-  "11:00-15:00",
-  "12:00-16:00",
-  "13:00-17:00",
-  "14:00-18:00",
-  "15:00-19:00",
-  "16:00-20:00",
-  "17:00-21:00",
-  "18:00-22:00",
-]
+
 
 const WEEKDAYS = [
   { value: 0, label: "日曜日", color: "text-red-600" },
@@ -147,32 +136,7 @@ export function BulkInputModal({ isOpen, onClose, onSave, currentMonth, preselec
 
           <Separator />
 
-          {/* 時間帯選択 */}
-          <div className="space-y-4">
-            <div className="text-sm font-medium">勤務可能時間帯を選択:</div>
-            <div className="space-y-3">
-              {TIME_SLOTS.map((timeSlot) => (
-                <div
-                  key={timeSlot}
-                  className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer"
-                  onClick={() => handleTimeSlotToggle(timeSlot)}
-                >
-                  <Checkbox
-                    id={`bulk-${timeSlot}`}
-                    checked={selectedTimeSlots.includes(timeSlot)}
-                    onChange={() => handleTimeSlotToggle(timeSlot)}
-                    className="pointer-events-none"
-                  />
-                  <label
-                    htmlFor={`bulk-${timeSlot}`}
-                    className="text-base font-medium leading-none cursor-pointer flex-1"
-                  >
-                    {timeSlot}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
+          
 
           {/* プレビュー */}
           {selectedWeekdays.length > 0 && selectedTimeSlots.length > 0 && (
