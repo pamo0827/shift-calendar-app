@@ -1,4 +1,4 @@
-use client"
+'use client';
 
 interface Shift {
   date: Date
@@ -86,7 +86,7 @@ export function exportToICalendar(shifts: Shift[], currentMonth: Date): void {
         icalContent.push(
           `DTSTART;TZID=Asia/Tokyo:${dtStart}`,
           `DTEND;TZID=Asia/Tokyo:${dtEnd}`,
-          `SUMMARY:シフト (${timeSlot})`,
+          `SUMMARY:シフト (${timeSlot})`
         )
       }
 
