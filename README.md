@@ -59,4 +59,4 @@
 
 本アプリは以下で公開・ホスティングされています：
 
-**[https://vercel.com/yoshi0827101328-9306s-projects/v0-shift-calendar-app](https://vercel.com/yoshi0827101328-9306s-projects/v0-shift-calendar-app)**
+**[https://vercel.com/yoshi0827101328-9306s-projects/v0-shift-calendar-app](https://v0-shift-calendar-app.vercel.app/)**
